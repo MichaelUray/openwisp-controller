@@ -325,6 +325,11 @@ class DeviceDetailSerializer(WHOISMixin, DeviceConfigSerializer):
                     pk_set=None,
                     raw_data=raw_data_for_signal_handlers,
                 )
+                # Re-apply default templates for the new organization.
+                # enforce_required_templates only adds required=True templates;
+                # without this call, shared templates with default=True (but
+                # required=False) are lost after the organization change.
+                instance.config.add_default_templates()
         return super().update(instance, validated_data)
 
 

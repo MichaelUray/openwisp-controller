@@ -540,6 +540,41 @@ class TestConfigApi(
         self.assertEqual(config.templates.count(), 1)
         self.assertEqual(config.templates.first(), org2_template)
 
+    def test_device_change_organization_default_templates_reassigned(self):
+        """
+        Shared default templates (default=True, required=False) must be
+        re-assigned when a device is moved to a new organization.
+
+        Regression test for https://github.com/openwisp/openwisp-controller/issues/1334
+        """
+        org1 = self._create_org(name="org1")
+        org2 = self._create_org(name="org2")
+        # Shared template: default=True, required=False, no organization
+        shared_default = self._create_template(
+            name="shared-default",
+            organization=None,
+            default=True,
+            required=False,
+        )
+        device = self._create_device(organization=org1)
+        config = self._create_config(device=device)
+        self.assertIn(shared_default, config.templates.all())
+
+        # Move device to org2
+        path = reverse("config_api:device_detail", args=[device.pk])
+        response = self.client.patch(
+            path,
+            data={"organization": str(org2.pk)},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        config.refresh_from_db()
+        self.assertIn(
+            shared_default,
+            config.templates.all(),
+            "Shared default template was lost after organization change",
+        )
+
     def test_device_patch_api(self):
         d1 = self._create_device(name="test-device")
         path = reverse("config_api:device_detail", args=[d1.pk])
